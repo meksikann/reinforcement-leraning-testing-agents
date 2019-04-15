@@ -8,30 +8,78 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras import Sequential
 from preprocessing import prepro, discount_rewards
 
-UP_ACTION = 2
-DOWN_ACTION = 3
-gamma = 0.99
-x_train = []
-y_train = []
-rewards = []
-reward_sum = 0
-episode_num = 0
-
 
 def start_pong():
+    UP_ACTION = 2
+    DOWN_ACTION = 3
+    gamma = 0.99
+    x_train = []
+    y_train = []
+    rewards = []
+    reward_sum = 0
+    episode_num = 0
+    POSITIVE = 1
+    NEGATIVE = 0
+
     env = gym.make('Pong-v0')
     observation = env.reset()
     prev_input = None
     model = get_model()
 
     while True:
-        # preprocess observation  and set input x_train input as difference between two images(frames)
+        # preproces observation  and set input x_train input as difference between two images(frames)
+
         current_input = prepro(observation)
         x_diff = current_input - prev_input if prev_input is not None else np.zeros(80*80)
         prev_input = current_input
 
-        # use policy network to action
-        proba = model.predict(np.expand_dims(x_diff, axis=1).T)
+        # use policy network to action to get what model thinks about UP action
+        prediction = model.predict(np.expand_dims(x_diff, axis=1).T)
+        action = UP_ACTION if np.random.uniform() < prediction else DOWN_ACTION
+
+        # print('chosen action:', action)
+        y_diff = POSITIVE if action == UP_ACTION else NEGATIVE
+        # print('x frame', x_diff)
+
+        # save results to training set
+        x_train.append(x_diff)
+        y_train.append(y_diff)
+
+        # make next action step
+        observation, reward, done, info = env.step(action)
+        # print('observation', observation)
+        # print('reward', reward)
+        # print('done', done)
+        # print('info', info)
+
+        # log rewards data
+        rewards.append(reward)
+
+        # log rewards sum
+        reward_sum += reward
+        env.render()
+
+        if done:
+            print('End of episode:', episode_num, 'Total reward: ', reward_sum)
+
+            # increment nomber of episode
+            episode_num += 1
+
+            # make a model training with episode results - stack training data and labels. Set training data weights
+            # regarding rewards received per episode
+            model.fit(x=np.vstack(x_train),
+                      y=np.vstack(y_train),
+                      verbose=1,
+                      sample_weight=discount_rewards(rewards, gamma))
+
+            # reinitialisation learning data
+            x_train = []
+            y_train = []
+            rewards = []
+            reward_sum = 0
+            prev_input = None
+            # reset game* (restart env)
+            observation = env.reset()
 
 
 
@@ -39,7 +87,7 @@ def start_pong():
 def get_model():
     model = Sequential()
 
-    model.add(Dense(units=200, input_dim=80*80, activation='relu', kernel_initializer='glorot_uniform'))
+    model.add(Dense(units=200, input_dim=80*80, activation='relu', kernel_initializer='TruncatedNormal'))
 
     model.add(Dense(units=1, activation='sigmoid', kernel_initializer='RandomNormal'))
 
