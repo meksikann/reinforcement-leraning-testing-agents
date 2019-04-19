@@ -72,6 +72,8 @@ def start_pong():
                       verbose=1,
                       sample_weight=discount_rewards(rewards, gamma))
 
+            save_model(model)
+
             # reinitialisation learning data
             x_train = []
             y_train = []
@@ -80,8 +82,6 @@ def start_pong():
             prev_input = None
             # reset game* (restart env)
             observation = env.reset()
-
-
 
 
 def get_model():
@@ -94,6 +94,11 @@ def get_model():
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     return model
+
+
+def save_model(model):
+    model.save('tf_model/pong_1.h5')
+
 
 
 start_pong()
