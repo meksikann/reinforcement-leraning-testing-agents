@@ -8,6 +8,8 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras import Sequential
 from preprocessing import prepro, discount_rewards
 
+WEIGHT_PATH = 'tf_model/pong_1.h5'
+
 
 def start_pong():
     UP_ACTION = 2
@@ -69,6 +71,7 @@ def start_pong():
             # regarding rewards received per episode
             model.fit(x=np.vstack(x_train),
                       y=np.vstack(y_train),
+                      epochs=2,
                       verbose=1,
                       sample_weight=discount_rewards(rewards, gamma))
 
@@ -91,14 +94,27 @@ def get_model():
 
     model.add(Dense(units=1, activation='sigmoid', kernel_initializer='RandomNormal'))
 
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    old_model = load_weights(model)
+
+    if old_model is not None:
+        return old_model
+    else:
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     return model
 
 
 def save_model(model):
-    model.save('tf_model/pong_1.h5')
+    model.save(WEIGHT_PATH)
 
+
+def load_weights(model):
+    try:
+        model.load_weights(WEIGHT_PATH)
+        return model
+    except Exception as err:
+        print(err)
+        return None
 
 
 start_pong()
