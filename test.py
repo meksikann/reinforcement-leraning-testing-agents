@@ -97,9 +97,9 @@ def get_model():
     old_model = load_weights(model)
 
     if old_model is not None:
-        return old_model
-    else:
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model = old_model
+
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
     return model
 
