@@ -5,16 +5,18 @@ import numpy as np
 import gym
 import random
 from tensorflow.keras.layers import Dense
-from tensorflow.keras import Sequential
+from tensorflow.keras import Sequential, callbacks
 from preprocessing import prepro, discount_rewards
+from easy_tf_log import tflog
 
 WEIGHT_PATH = 'tf_model/pong_1.h5'
+log_dir = 'tf_model/logs'
 
 
 def start_pong():
     UP_ACTION = 2
     DOWN_ACTION = 3
-    gamma = 0.99
+    gamma = 0.89
     x_train = []
     y_train = []
     rewards = []
@@ -22,11 +24,13 @@ def start_pong():
     episode_num = 0
     POSITIVE = 1
     NEGATIVE = 0
+    running_reward = None
 
     env = gym.make('Pong-v0')
     observation = env.reset()
     prev_input = None
     model = get_model()
+    tbCallBack = callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_images=True)
 
     while True:
         # preproces observation  and set input x_train input as difference between two images(frames)
@@ -37,6 +41,7 @@ def start_pong():
 
         # use policy network to action to get what model thinks about UP action
         prediction = model.predict(np.expand_dims(x_diff, axis=1).T)
+
         action = UP_ACTION if np.random.uniform() < prediction else DOWN_ACTION
 
         # print('chosen action:', action)
@@ -71,9 +76,12 @@ def start_pong():
             # regarding rewards received per episode
             model.fit(x=np.vstack(x_train),
                       y=np.vstack(y_train),
-                      epochs=2,
-                      verbose=1,
+                      verbose=0,
+                      # callbacks=[tbCallBack],
                       sample_weight=discount_rewards(rewards, gamma))
+
+            running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
+            # tflog('running_reward', running_reward)
 
             save_model(model)
 
@@ -90,7 +98,7 @@ def start_pong():
 def get_model():
     model = Sequential()
 
-    model.add(Dense(units=200, input_dim=80*80, activation='relu', kernel_initializer='TruncatedNormal'))
+    model.add(Dense(units=200, input_dim=80*80, activation='relu', kernel_initializer='glorot_uniform'))
 
     model.add(Dense(units=1, activation='sigmoid', kernel_initializer='RandomNormal'))
 
@@ -110,6 +118,7 @@ def save_model(model):
 
 def load_weights(model):
     try:
+        print('Previously Weights loaded....')
         model.load_weights(WEIGHT_PATH)
         return model
     except Exception as err:
