@@ -16,7 +16,7 @@ log_dir = 'tf_model/logs'
 def start_pong():
     UP_ACTION = 2
     DOWN_ACTION = 3
-    gamma = 0.89
+    gamma = 0.99
     x_train = []
     y_train = []
     rewards = []
