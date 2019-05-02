@@ -77,7 +77,7 @@ def start_pong():
             model.fit(x=np.vstack(x_train),
                       y=np.vstack(y_train),
                       verbose=0,
-                      callbacks=[tbCallBack],
+                      # callbacks=[tbCallBack],
                       sample_weight=discount_rewards(rewards, gamma))
 
             running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
